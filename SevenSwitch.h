@@ -67,7 +67,6 @@
  */
 @property (nonatomic, strong) UIColor *shadowColor;
 
-
 /*
  *	Sets whether or not the switch edges are rounded.
  *  Set to NO to get a stylish square switch.
@@ -75,6 +74,17 @@
  */
 @property (nonatomic, assign) BOOL isRounded;
 
+/*
+ *  Sets a corner radius for the stylish square switch.
+ *  Defaults to 2.
+ */
+@property (nonatomic, assign) CGFloat squareCornerRadius;
+
+/*
+ *  Sets a thumb inset.
+ *  Defaults to (1, 1, 1, 1).
+ */
+@property (nonatomic, assign) UIEdgeInsets thumbInset;
 
 /*
  *	Sets the image that shows when the switch is on.
@@ -92,7 +102,7 @@
 
 
 /*
- * Set whether the switch is on or off. Optionally animate the change
+ *  Set whether the switch is on or off. Optionally animate the change
  */
 - (void)setOn:(BOOL)on animated:(BOOL)animated;
 

@@ -48,6 +48,8 @@
 @synthesize inactiveColor, activeColor, onTintColor, borderColor, thumbTintColor, shadowColor;
 @synthesize onImage, offImage;
 @synthesize isRounded;
+@synthesize squareCornerRadius;
+@synthesize thumbInset;
 @synthesize on;
 
 
@@ -95,6 +97,8 @@
     // default values
     self.on = NO;
     self.isRounded = YES;
+    self.squareCornerRadius = 2;
+    self.thumbInset = UIEdgeInsetsMake(1, 1, 1, 1);
     self.inactiveColor = [UIColor clearColor];
     self.activeColor = [UIColor colorWithRed:0.89f green:0.89f blue:0.89f alpha:1.00f];
     self.onTintColor = [UIColor colorWithRed:0.30f green:0.85f blue:0.39f alpha:1.00f];
@@ -124,7 +128,7 @@
     [self addSubview:offImageView];
 
     // knob
-    knob = [[UIView alloc] initWithFrame:CGRectMake(1, 1, self.frame.size.height - 2, self.frame.size.height - 2)];
+    knob = [[UIView alloc] initWithFrame:UIEdgeInsetsInsetRect(self.frame, self.thumbInset)];
     knob.backgroundColor = self.thumbTintColor;
     knob.layer.cornerRadius = (self.frame.size.height * 0.5) - 1;
     knob.layer.shadowColor = self.shadowColor.CGColor;
@@ -148,11 +152,11 @@
     didChangeWhileTracking = NO;
 
     // make the knob larger and animate to the correct color
-    CGFloat activeKnobWidth = self.bounds.size.height - 2 + 5;
+    CGFloat activeKnobWidth = self.bounds.size.height - self.thumbInset.left + self.thumbInset.right + 5;
     isAnimating = YES;
     [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveEaseOut|UIViewAnimationOptionBeginFromCurrentState animations:^{
         if (self.on) {
-            knob.frame = CGRectMake(self.bounds.size.width - (activeKnobWidth + 1), knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
+            knob.frame = CGRectMake(self.bounds.size.width - (activeKnobWidth + self.thumbInset.right), knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
             background.backgroundColor = self.onTintColor;
         }
         else {
@@ -225,20 +229,21 @@
 
         // background
         background.frame = CGRectMake(0, 0, frame.size.width, frame.size.height);
-        background.layer.cornerRadius = self.isRounded ? frame.size.height * 0.5 : 2;
+        background.layer.cornerRadius = self.isRounded ? frame.size.height * 0.5 : self.squareCornerRadius;
 
         // images
         onImageView.frame = CGRectMake(0, 0, frame.size.width - frame.size.height, frame.size.height);
         offImageView.frame = CGRectMake(frame.size.height, 0, frame.size.width - frame.size.height, frame.size.height);
 
         // knob
-        CGFloat normalKnobWidth = frame.size.height - 2;
+        CGFloat normalKnobWidth = frame.size.height - self.thumbInset.top - self.thumbInset.bottom;
         if (self.on)
-            knob.frame = CGRectMake(frame.size.width - (normalKnobWidth + 1), 1, frame.size.height - 2, normalKnobWidth);
+            knob.frame = CGRectMake(frame.size.width - (normalKnobWidth + self.thumbInset.right), self.thumbInset.top,
+                                    frame.size.height - self.thumbInset.top - self.thumbInset.bottom, normalKnobWidth);
         else
-            knob.frame = CGRectMake(1, 1, normalKnobWidth, normalKnobWidth);
+            knob.frame = CGRectMake(self.thumbInset.left, self.thumbInset.top, normalKnobWidth, normalKnobWidth);
 
-        knob.layer.cornerRadius = self.isRounded ? (frame.size.height * 0.5) - 1 : 2;
+        knob.layer.cornerRadius = self.isRounded ? (frame.size.height * 0.5) - 1 : self.squareCornerRadius;
     }
 }
 
@@ -327,14 +332,39 @@
         knob.layer.cornerRadius = (self.frame.size.height * 0.5) - 1;
     }
     else {
-        background.layer.cornerRadius = 2;
-        knob.layer.cornerRadius = 2;
+        background.layer.cornerRadius = self.squareCornerRadius;
+        knob.layer.cornerRadius = self.squareCornerRadius;
     }
 }
 
 
 /*
- * Set (without animation) whether the switch is on or off
+ *  Sets a corner radius for the stylish square switch.
+ *  Defaults to 2.
+ */
+- (void)setSquareCornerRadius:(CGFloat)cornerRadius
+{
+    squareCornerRadius = cornerRadius;
+
+    if (!isRounded) {
+        background.layer.cornerRadius = squareCornerRadius;
+        knob.layer.cornerRadius = squareCornerRadius;
+    }
+}
+
+
+/*
+ *  Sets a thumb inset.
+ *  Defaults to (1, 1, 1, 1).
+ */
+- (void)setThumbInset:(UIEdgeInsets)inset
+{
+    thumbInset = inset;
+}
+
+
+/*
+ *  Set (without animation) whether the switch is on or off
  */
 - (void)setOn:(BOOL)isOn {
     [self setOn:isOn animated:NO];
@@ -342,7 +372,7 @@
 
 
 /*
- * Set the state of the switch to on or off, optionally animating the transition.
+ *  Set the state of the switch to on or off, optionally animating the transition.
  */
 - (void)setOn:(BOOL)isOn animated:(BOOL)animated {
     on = isOn;
@@ -376,15 +406,15 @@
  * optionally make it animated
  */
 - (void)showOn:(BOOL)animated {
-    CGFloat normalKnobWidth = self.bounds.size.height - 2;
+    CGFloat normalKnobWidth = self.bounds.size.height - self.thumbInset.top - self.thumbInset.bottom;
     CGFloat activeKnobWidth = normalKnobWidth + 5;
     if (animated) {
         isAnimating = YES;
         [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveEaseOut|UIViewAnimationOptionBeginFromCurrentState animations:^{
             if (self.tracking)
-                knob.frame = CGRectMake(self.bounds.size.width - (activeKnobWidth + 1), knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
+                knob.frame = CGRectMake(self.bounds.size.width - (activeKnobWidth + self.thumbInset.right), knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
             else
-                knob.frame = CGRectMake(self.bounds.size.width - (normalKnobWidth + 1), knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
+                knob.frame = CGRectMake(self.bounds.size.width - (normalKnobWidth + self.thumbInset.right), knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
             background.backgroundColor = self.onTintColor;
             background.layer.borderColor = self.onTintColor.CGColor;
             onImageView.alpha = 1.0;
@@ -395,9 +425,9 @@
     }
     else {
         if (self.tracking)
-            knob.frame = CGRectMake(self.bounds.size.width - (activeKnobWidth + 1), knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
+            knob.frame = CGRectMake(self.bounds.size.width - (activeKnobWidth + self.thumbInset.right), knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
         else
-            knob.frame = CGRectMake(self.bounds.size.width - (normalKnobWidth + 1), knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
+            knob.frame = CGRectMake(self.bounds.size.width - (normalKnobWidth + self.thumbInset.right), knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
         background.backgroundColor = self.onTintColor;
         background.layer.borderColor = self.onTintColor.CGColor;
         onImageView.alpha = 1.0;
@@ -413,17 +443,17 @@
  * optionally make it animated
  */
 - (void)showOff:(BOOL)animated {
-    CGFloat normalKnobWidth = self.bounds.size.height - 2;
+    CGFloat normalKnobWidth = self.bounds.size.height - self.thumbInset.top - self.thumbInset.bottom;
     CGFloat activeKnobWidth = normalKnobWidth + 5;
     if (animated) {
         isAnimating = YES;
         [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveEaseOut|UIViewAnimationOptionBeginFromCurrentState animations:^{
             if (self.tracking) {
-                knob.frame = CGRectMake(1, knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
+                knob.frame = CGRectMake(self.thumbInset.left, knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
                 background.backgroundColor = self.activeColor;
             }
             else {
-                knob.frame = CGRectMake(1, knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
+                knob.frame = CGRectMake(self.thumbInset.left, knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
                 background.backgroundColor = self.inactiveColor;
             }
             background.layer.borderColor = self.borderColor.CGColor;
@@ -435,11 +465,11 @@
     }
     else {
         if (self.tracking) {
-            knob.frame = CGRectMake(1, knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
+            knob.frame = CGRectMake(self.thumbInset.left, knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
             background.backgroundColor = self.activeColor;
         }
         else {
-            knob.frame = CGRectMake(1, knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
+            knob.frame = CGRectMake(self.thumbInset.left, knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
             background.backgroundColor = self.inactiveColor;
         }
         background.layer.borderColor = self.borderColor.CGColor;
