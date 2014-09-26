@@ -30,10 +30,12 @@
     UIView *knob;
     UIImageView *onImageView;
     UIImageView *offImageView;
+    UIImageView *thumbImageView;
     BOOL currentVisualValue;
     BOOL startTrackingValue;
     BOOL didChangeWhileTracking;
     BOOL isAnimating;
+    BOOL userDidSpecifyOnThumbTintColor;
 }
 
 - (void)showOn:(BOOL)animated;
@@ -45,8 +47,8 @@
 
 @implementation SevenSwitch
 
-@synthesize inactiveColor, activeColor, onTintColor, borderColor, thumbTintColor, shadowColor;
-@synthesize onImage, offImage;
+@synthesize inactiveColor, activeColor, onTintColor, borderColor, thumbTintColor, onThumbTintColor, shadowColor;
+@synthesize onImage, offImage, thumbImage;
 @synthesize isRounded;
 @synthesize squareCornerRadius;
 @synthesize thumbInset;
@@ -104,8 +106,10 @@
     self.onTintColor = [UIColor colorWithRed:0.30f green:0.85f blue:0.39f alpha:1.00f];
     self.borderColor = [UIColor colorWithRed:0.89f green:0.89f blue:0.91f alpha:1.00f];
     self.thumbTintColor = [UIColor whiteColor];
+    self.onThumbTintColor = [UIColor whiteColor];
     self.shadowColor = [UIColor grayColor];
     currentVisualValue = NO;
+    userDidSpecifyOnThumbTintColor = NO;
 
     // background
     background = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width, self.frame.size.height)];
@@ -114,19 +118,33 @@
     background.layer.borderColor = self.borderColor.CGColor;
     background.layer.borderWidth = 1.0;
     background.userInteractionEnabled = NO;
+	background.clipsToBounds = YES;
     [self addSubview:background];
 
-    // images
+    // on/off images
     onImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width - self.frame.size.height, self.frame.size.height)];
     onImageView.alpha = 0;
     onImageView.contentMode = UIViewContentModeCenter;
-    [self addSubview:onImageView];
+    [background addSubview:onImageView];
 
     offImageView = [[UIImageView alloc] initWithFrame:CGRectMake(self.frame.size.height, 0, self.frame.size.width - self.frame.size.height, self.frame.size.height)];
     offImageView.alpha = 1.0;
     offImageView.contentMode = UIViewContentModeCenter;
-    [self addSubview:offImageView];
+    [background addSubview:offImageView];
+	
+    // labels
+	self.onLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width - self.frame.size.height, self.frame.size.height)];
+	self.onLabel.textAlignment = NSTextAlignmentCenter;
+    self.onLabel.textColor = [UIColor lightGrayColor];
+    self.onLabel.font = [UIFont systemFontOfSize:12];
+    [background addSubview:self.onLabel];
 
+	self.offLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.frame.size.height, 0, self.frame.size.width - self.frame.size.height, self.frame.size.height)];
+    self.offLabel.textAlignment = NSTextAlignmentCenter;
+    self.offLabel.textColor = [UIColor lightGrayColor];
+    self.offLabel.font = [UIFont systemFontOfSize:12];
+    [background addSubview:self.offLabel];
+	
     // knob
     knob = [[UIView alloc] initWithFrame:UIEdgeInsetsInsetRect(self.frame, self.thumbInset)];
     knob.backgroundColor = self.thumbTintColor;
@@ -135,9 +153,16 @@
     knob.layer.shadowRadius = 2.0;
     knob.layer.shadowOpacity = 0.5;
     knob.layer.shadowOffset = CGSizeMake(0, 3);
+    knob.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:knob.bounds cornerRadius:knob.layer.cornerRadius].CGPath;
     knob.layer.masksToBounds = NO;
     knob.userInteractionEnabled = NO;
     [self addSubview:knob];
+    
+    // kob image
+    thumbImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, knob.frame.size.width, knob.frame.size.height)];
+    thumbImageView.contentMode = UIViewContentModeCenter;
+    thumbImageView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [knob addSubview:thumbImageView];
 
     isAnimating = NO;
 }
@@ -158,10 +183,12 @@
         if (self.on) {
             knob.frame = CGRectMake(self.bounds.size.width - (activeKnobWidth + self.thumbInset.right), knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
             background.backgroundColor = self.onTintColor;
+            knob.backgroundColor = self.onThumbTintColor;
         }
         else {
             knob.frame = CGRectMake(knob.frame.origin.x, knob.frame.origin.y, activeKnobWidth, knob.frame.size.height);
             background.backgroundColor = self.activeColor;
+            knob.backgroundColor = self.thumbTintColor;
         }
     } completion:^(BOOL finished) {
         isAnimating = NO;
@@ -234,7 +261,9 @@
         // images
         onImageView.frame = CGRectMake(0, 0, frame.size.width - frame.size.height, frame.size.height);
         offImageView.frame = CGRectMake(frame.size.height, 0, frame.size.width - frame.size.height, frame.size.height);
-
+		self.onLabel.frame = CGRectMake(0, 0, frame.size.width - frame.size.height, frame.size.height);
+		self.offLabel.frame = CGRectMake(frame.size.height, 0, frame.size.width - frame.size.height, frame.size.height);
+		
         // knob
         CGFloat normalKnobWidth = frame.size.height - self.thumbInset.top - self.thumbInset.bottom;
         if (self.on)
@@ -286,7 +315,20 @@
  */
 - (void)setThumbTintColor:(UIColor *)color {
     thumbTintColor = color;
-    knob.backgroundColor = color;
+    if (!userDidSpecifyOnThumbTintColor)
+        onThumbTintColor = color;
+    if ((!userDidSpecifyOnThumbTintColor || !self.on) && !self.isTracking)
+        knob.backgroundColor = color;
+}
+
+/*
+ *	Sets the knob color that shows when the switch is on. Defaults to white.
+ */
+- (void)setOnThumbTintColor:(UIColor *)color {
+    onThumbTintColor = color;
+    userDidSpecifyOnThumbTintColor = YES;
+    if (self.on && !self.isTracking)
+        knob.backgroundColor = color;
 }
 
 /*
@@ -297,6 +339,14 @@
     knob.layer.shadowColor = color.CGColor;
 }
 
+/*
+ *	Sets the thumb image.
+ */
+- (void)setThumbImage:(UIImage *)image
+{
+    thumbImage = image;
+    thumbImageView.image = image;
+}
 
 /*
  *	Sets the image that shows when the switch is on.
@@ -335,6 +385,8 @@
         background.layer.cornerRadius = self.squareCornerRadius;
         knob.layer.cornerRadius = self.squareCornerRadius;
     }
+    
+    knob.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:knob.bounds cornerRadius:knob.layer.cornerRadius].CGPath;
 }
 
 
@@ -417,8 +469,11 @@
                 knob.frame = CGRectMake(self.bounds.size.width - (normalKnobWidth + self.thumbInset.right), knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
             background.backgroundColor = self.onTintColor;
             background.layer.borderColor = self.onTintColor.CGColor;
+            knob.backgroundColor = self.onThumbTintColor;
             onImageView.alpha = 1.0;
             offImageView.alpha = 0;
+			self.onLabel.alpha = 1.0;
+			self.offLabel.alpha = 0;
         } completion:^(BOOL finished) {
             isAnimating = NO;
         }];
@@ -430,8 +485,11 @@
             knob.frame = CGRectMake(self.bounds.size.width - (normalKnobWidth + self.thumbInset.right), knob.frame.origin.y, normalKnobWidth, knob.frame.size.height);
         background.backgroundColor = self.onTintColor;
         background.layer.borderColor = self.onTintColor.CGColor;
+        knob.backgroundColor = self.onThumbTintColor;
         onImageView.alpha = 1.0;
         offImageView.alpha = 0;
+		self.onLabel.alpha = 1.0;
+		self.offLabel.alpha = 0;
     }
     
     currentVisualValue = YES;
@@ -457,8 +515,11 @@
                 background.backgroundColor = self.inactiveColor;
             }
             background.layer.borderColor = self.borderColor.CGColor;
+            knob.backgroundColor = self.thumbTintColor;
             onImageView.alpha = 0;
             offImageView.alpha = 1.0;
+			self.onLabel.alpha = 0;
+			self.offLabel.alpha = 1.0;
         } completion:^(BOOL finished) {
             isAnimating = NO;
         }];
@@ -473,8 +534,11 @@
             background.backgroundColor = self.inactiveColor;
         }
         background.layer.borderColor = self.borderColor.CGColor;
+        knob.backgroundColor = self.thumbTintColor;
         onImageView.alpha = 0;
         offImageView.alpha = 1.0;
+		self.onLabel.alpha = 0;
+		self.offLabel.alpha = 1.0;
     }
     
     currentVisualValue = NO;
